@@ -537,6 +537,7 @@ function updateText(s) {
         
         for (var i = 0 ; i < shapes.length ; i++) {
             isloaded = (shapeGeo[i]!=undefined) && isloaded;
+            console.log("shape #",i," is loaded? :",shapeGeo[i]!=undefined);
         }
         
         //if (isloaded == true && previousState == false) {
