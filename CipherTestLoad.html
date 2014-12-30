@@ -30,6 +30,8 @@
     
     var scene, camera, renderer;
     
+    var previousState = false;
+    
     var mainObj = new THREE.Object3D();
     
     var shape = new THREE.Mesh();
@@ -64,15 +66,22 @@ var res = 2;
 
 var shapeGeo = [];
 
+
+
 var dpr = 1;
 if (window.devicePixelRatio !== undefined) {
     dpr = window.devicePixelRatio;
 }
 
+
+
+
+
+
     init();
     updateModel();
-updateText(phText);
-createDiscs();
+    updateText(phText);
+    createDiscs();
     animate();
 
 
@@ -85,21 +94,23 @@ createDiscs();
       var WIDTH = window.innerWidth  ,
           HEIGHT = window.innerHeight ;
           
-          scene.add(mainObj);
+          //scene.add(mainObj);
           mainObj.add(phonGroup);
           
-    // test Load all shapes //
-    for (var i = 0 ; i < shapes.length ; i++) {
-        var loader = new THREE.JSONLoader();
-        loader.load( shapes[i].shapePath, function(geometry){
-                    shapeGeo.push(geometry);
-                    console.log("shapeGeo :",geometry);
-                    
-        })
-        
-        
-    }
-    console.log("shapeGeo length:",shapeGeo.length);
+          // test Load all shapes //
+          for (var i = 0 ; i < shapes.length ; i++) {
+              
+
+
+              
+              var loader = new THREE.JSONLoader();
+              loader.load( shapes[i].shapePath, function(geometry){
+                          shapeGeo.push(geometry);
+                          
+                          })
+          }
+          
+
 
 
         
@@ -139,7 +150,7 @@ createDiscs();
           }
           if (e.keyCode == "77") {
               var statsOn = document.getElementById('statsId')!=null;
-              console.log("statsOn:",statsOn);
+
               if (statsOn == true) {
                   document.body.removeChild(statsElement);
               }else{
@@ -179,8 +190,7 @@ createDiscs();
       //camera.aspect = WIDTH / HEIGHT;
                               
                               var ratio = Math.abs((camera.left-camera.right)/(camera.top - camera.bottom));
-                              //console.log("ratio",ratio);
-                              //console.log("cameraLeft",camera.left / ratio);
+
                               camera.left = camera.left / ratio * WIDTH/HEIGHT;
                               camera.right = camera.right / ratio * WIDTH/HEIGHT;
                               
@@ -244,8 +254,7 @@ createDiscs();
                                  
       //Create background sphere
       
-      //console.log("x", Math.abs(camera.left-camera.right)/2);
-      //console.log("y", Math.abs(camera.top-camera.bottom)/2);
+
       
       //var geometry = new THREE.SphereGeometry(10,8,6,0,Math.PI/2,0,Math.PI);
       var geometry = new THREE.PlaneBufferGeometry( 1,1, 2,2 );
@@ -271,7 +280,7 @@ createDiscs();
           var cval =  200 - Math.floor( Math.pow(j/iter,2) * 200 ) + 55;
           
           var sval = "rgb("+cval+","+cval+","+cval+")";
-          console.log(sval);
+
           
           gradient.addColorStop((1-j/(iter)) * 1, sval);
           
@@ -327,7 +336,7 @@ createDiscs();
       composer.addPass( new THREE.RenderPass( scene, camera ) );
       
       glitchPass = new THREE.GlitchPass();
-      glitchPass.specialWild = true;
+      //glitchPass.specialWild = true;
       //glitchPass.goWild = true;
 
       glitchPass.renderToScreen = true;
@@ -345,7 +354,7 @@ function updateModel() {
                 var material = new THREE.MeshLambertMaterial({color: 0xffffff});
                 //material.side=THREE.DoubleSide;
                 var geometry = shapeGeo[shapeIndex];
-                console.log("currentGeo",geometry);
+
                 mesh = new THREE.Mesh(geometry, material);
                 shape = mesh;
                 shape.position.x = opoz;
@@ -354,7 +363,11 @@ function updateModel() {
                 shape.rotation.y = Math.random() * 360;
                 shape.rotation.z = Math.random() * 360;
                 
+                if (shapeGeo[0]!=undefined) {
+                
                 mainObj.add(shape);
+                
+                }
                 
 }
 
@@ -386,9 +399,10 @@ function createDiscs() {
         negDisc.add(courcle);
         
     }
-    
+
     mainObj.add(posDisc);
     mainObj.add(negDisc);
+
 }
 
 function updateDiscs() {
@@ -509,19 +523,44 @@ function updateText(s) {
     
     phonGroup.position.x = tpoz;
     
+   
     
-    
-    
-    
-    
-    //console.log( timer );
+
 }
 
     // Renders the scene and updates the render as needed.
     function animate() {
+        
+        if (previousState==false) {
+        
+        var isloaded = true;
+        
+        for (var i = 0 ; i < shapes.length ; i++) {
+            isloaded = (shapeGeo[i]!=undefined) && isloaded;
+        }
+        
+        //if (isloaded == true && previousState == false) {
+        if (isloaded == true ) {
+            mainObj.remove(shape);
+            updateModel()
+            
+            scene.add(mainObj);
+        }
+        
+        
+        previousState = isloaded;
+        
+        }
+        
+        //console.log(isloaded);
+        
+       
+
+
 
       // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
       requestAnimationFrame(animate);
+
       stats.update();
       
       //rotate shape
@@ -543,14 +582,18 @@ function updateText(s) {
      shape.scale.x = flip;
      phonGroup.scale.x = flip;
      
-     
+
       composer.render();
-      
+     
       //renderer.render(scene, camera);
       
       
       
       if (timer > 10) {
+          
+        
+          
+
           
           timer = 0;
           var blop = Math.random();
@@ -574,6 +617,8 @@ function updateText(s) {
           mainObj.remove(shape);
           //updateModel(shapes[shapeIndex].shapePath);
           updateModel();
+
+          
           phonGroup.remove(phoneme);
           phonGroup.remove(phoneme2);
           updateText(shapes[shapeIndex].shapePhon);
@@ -583,6 +628,7 @@ function updateText(s) {
       glitchPass.curF = timer;
 
     }
+  
 
   </script>
 
