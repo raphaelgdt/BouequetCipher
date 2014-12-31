@@ -90,7 +90,9 @@ createDiscs();
         text2.style.width = 100;
         text2.style.height = 100;
         text2.style.backgroundColor = "grey";
+        //text2.style.borderWidth = "20px 20px 120px 20px";
         
+        text2.style.font = "normal 20px Arial"
         text2.innerHTML = bloop;
         text2.style.right = (50) + 'px';
         text2.style.bottom = (50) + 'px';
@@ -121,14 +123,17 @@ createDiscs();
                           //create mesh etc as before
                           ///...
                           shapeGeo.push(geometry);
-                          bloop = (_partNo+1) + '/' + shapes.length + ' loading';
+                          
                           console.log('shape :',_partNo,' loaded');
-                          text2.innerHTML = bloop;
+                          console.log(bloop);
+                          
                           
                           
                           if(_partNo + 1 < partCount){ //first 4 parts
                           _partNo++;
-                          loadUp(_partNo); //load next part
+                          bloop = (_partNo+1) + '/' + shapes.length + ' loading';
+                          text2.innerHTML = bloop;
+                          
                           
                           if ( _partNo==1 ) {
                               mainObj.remove(shape);
@@ -136,8 +141,10 @@ createDiscs();
                               scene.add(mainObj);
                           }
                           if (_partNo==partCount-1) {
+                              text2.innerHTML = "loading complete";
                           document.body.removeChild(text2);
                           }
+                          loadUp(_partNo); //load next part
                           }
                           }
 
