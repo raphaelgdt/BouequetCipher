@@ -40,6 +40,7 @@ THREE.GlitchPass = function ( dt_size ) {
 	this.generateTrigger();
 	
 };
+    var gTimer = 0.;
 
 THREE.GlitchPass.prototype = {
 
@@ -73,7 +74,7 @@ THREE.GlitchPass.prototype = {
 		}
         else if(this.specialWild==true )
 		{
-            var control = Math.sin(this.curF/10*Math.PI*2);
+            var control = gTimer>7;
 			this.uniforms[ 'amount' ].value=Math.random()/180*1*control;
 			this.uniforms[ 'angle' ].value=THREE.Math.randFloat(-Math.PI,Math.PI)*1;
 			this.uniforms[ 'distortion_x' ].value=THREE.Math.randFloat(0,0.1)*0.;
@@ -81,6 +82,12 @@ THREE.GlitchPass.prototype = {
 			this.uniforms[ 'seed_x' ].value=THREE.Math.randFloat(-0.1,0.1)*.2*control;
 			this.uniforms[ 'seed_y' ].value=THREE.Math.randFloat(-0.1,0.1)*.2*control;
             this.uniforms[ 'snowVal' ].value=Math.abs(control)*0;
+            
+            gTimer -= .05;
+            if (gTimer<0) {
+                this.generateGtimer();
+            }
+
 		}
 
 		else if(this.goWild==false)
@@ -103,6 +110,10 @@ THREE.GlitchPass.prototype = {
 	{
 		this.randX=THREE.Math.randInt(120,240);
 	},
+    generateGtimer:function()
+    {
+        gTimer = THREE.Math.randFloat(0,10);
+    },
 	generateHeightmap:function(dt_size)
 	{
 		var data_arr = new Float32Array( dt_size*dt_size * 3 );
