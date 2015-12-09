@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Bouequet</title>
+  <meta charset="utf-8">
+</head>
+<body style="margin: 0;">
+
+  <script src="js/three.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src='js/THREEx.FullScreen.js'></script>
+  <script src="js/stats.min.js"></script>
+  <script src="shapeListAdvanced3.js"></script>
+  
+  <script src="js/shaders/CopyShader.js"></script>
+  <script src="js/shaders/DigitalGlitch.js"></script>
+  <script src="js/shaders/FXAAShader.js"></script>
+  
+  <script src="js/postprocessing/EffectComposer.js"></script>
+  <script src="js/postprocessing/RenderPass.js"></script>
+  <script src="js/postprocessing/MaskPass.js"></script>
+  <script src="js/postprocessing/ShaderPass.js"></script>
+  <script src="js/postprocessing/GlitchPassCustom.js"></script>
+
+  <script>
+
+    // Set up the scene, camera, and renderer as global variables.
+    
+    
+    
+    var scene, camera, renderer;
+    
+    var mainObj = new THREE.Object3D();
+    
+    var shape = new THREE.Mesh();
+
+
+    var mainClock = new THREE.Clock();
+    var timer = 0;
+
+
+    
+    var opoz;
+    var tpoz;
+
+    var rx = 0.01;
+    var ry = 0.01;
+    var rz = 0.01;
+
+    var flip =1 ;
+
+    var shapeIndex = 0;
+
+    var glitchPass;
+    var effectFXAA;
+
+    var shapeGeo = [];
+
+    var dpr = 1;
+    if (window.devicePixelRatio !== undefined) {
+    dpr = window.devicePixelRatio;
+    }
+  
+    var bloop = '';
+
+    init();
+    updateModel();
+
+    animate();
+    
+    
+
+
+
+    // Sets up the scene.
+    function init() {
+        
+        // Create loading label
+        var text2 = document.createElement('div');
+        text2.style.position = 'absolute';
+        //text2.style.zIndex = 1;    // if you still don't see the label, try uncommenting this
+        text2.style.width = 100;
+        text2.style.height = 100;
+        text2.style.backgroundColor = "grey";
+        //text2.style.borderWidth = "20px 20px 120px 20px";
+        
+        text2.style.font = "normal 20px Arial"
+        text2.innerHTML = bloop;
+        text2.style.right = (50) + 'px';
+        text2.style.bottom = (50) + 'px';
+        document.body.appendChild(text2);
+
+    // Create the scene and set the scene size.
+      scene = new THREE.Scene();
+      var WIDTH = window.innerWidth  ,
+          HEIGHT = window.innerHeight ;
+    
+    //scene.add(mainObj);
+//    mainObj.add(phonGroup);
+
+
+    // load all models' geo into a the geo array shapeGeo
+    var partNo = 0;
+    var partCount = shapes.length;
+    bloop = (partNo+1) + '/' + shapes.length + ' loading';
+    
+    loadUp(partNo);
+    // loading each shape one by one and notifying user
+    function loadUp(_partNo){
+        var loader = new THREE.JSONLoader();
+        loader.load(shapes[_partNo].shapePath, function(geometry)
+                    {
+                    createPart(geometry, _partNo);
+                    }
+                    )}
+    function createPart(geometry, _partNo) {
+        //create mesh etc as before
+        ///...
+        shapeGeo.push(geometry);
+        console.log('shape :',_partNo,' loaded');
+        console.log(bloop);
+        
+        if(_partNo + 1 < partCount){ //first 4 parts
+            _partNo++;
+            bloop = (_partNo+1) + '/' + shapes.length + ' loading';
+            text2.innerHTML = bloop;
+            
+            if ( _partNo==1 ) {
+                mainObj.remove(shape);
+                updateModel();
+                scene.add(mainObj);
+            }
+            if (_partNo==partCount-1) {
+                text2.innerHTML = "loading complete";
+                document.body.removeChild(text2);
+            }
+            
+            loadUp(_partNo); //load next part
+        }
+    }
+    
+    
+    // Create a renderer and add it to the DOM.
+    renderer = new THREE.WebGLRenderer({devicePixelRatio:1 , antialias:false});
+    renderer.setSize(WIDTH  , HEIGHT  );
+    document.body.appendChild(renderer.domElement);
+    
+    
+    //Create stats
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '50px';
+    stats.domElement.style.left = '50px';
+    statsElement = stats.domElement;
+    statsElement.id = 'statsId';
+    
+    // Create a camera, zoom it out from the model a bit, and add it to the scene.
+    var blop = WIDTH/HEIGHT;
+    
+    camera = new THREE.OrthographicCamera( -5*blop, 5*blop, 5, -5, 0, 1000 );
+    camera.position.set(0,0,12);
+    scene.add(camera);
+    
+    // set general position of shapes
+    opoz = camera.left + .5 *Math.abs(camera.left-camera.right);
+    
+    // listen to keydown events
+    document.body.addEventListener("keydown", keyAction, false);
+    
+    function keyAction(e) {
+        if (e.keyCode == "70") { // if "f" pressed, make FULLSCREEN
+            THREEx.FullScreen.request();
+        }
+        
+        if (e.keyCode == "83") { // if "s" pressed, show/hide stats
+            var statsOn = document.getElementById('statsId')!=null;
+            //console.log("statsOn:",statsOn);
+            if (statsOn == true) {
+                document.body.removeChild(statsElement);
+            }else{
+                document.body.appendChild(statsElement);
+            }
+        }
+    }
+    
+    
+    // This part hides the cursor if idle for 5s
+    var ctimer;
+    document.addEventListener('mousemove', function() {
+                              document.body.style.cursor = 'default';
+                              clearTimeout( ctimer );
+                              ctimer = setTimeout(function() { document.body.style.cursor = 'none'; }, 1500 ); },false );
+
+
+    // Create an event listener that resizes the renderer with the browser window.
+    window.addEventListener('resize', function() {
+                            var WIDTH = window.innerWidth ,
+                            HEIGHT = window.innerHeight ;
+                            renderer.setSize(WIDTH, HEIGHT);
+                            composer.setSize(WIDTH * dpr, HEIGHT * dpr);
+                            effectFXAA.uniforms[ 'resolution' ].value.set( 1 / (WIDTH * dpr), 1 / (HEIGHT * dpr) );
+                            
+                            //camera.aspect = WIDTH / HEIGHT;
+                            
+                            var ratio = Math.abs((camera.left-camera.right)/(camera.top - camera.bottom));
+                            
+                            camera.left = camera.left / ratio * WIDTH/HEIGHT;
+                            camera.right = camera.right / ratio * WIDTH/HEIGHT;
+                            
+                            opoz = camera.left + .5 *Math.abs(camera.left-camera.right);
+                              
+                            shape.position.x= opoz;
+                              
+//                            tpoz = camera.left + .75 *Math.abs(camera.left-camera.right);
+                              
+//                            phonGroup.position.x = tpoz;
+                            
+                              
+                            bgPlane.scale.x = Math.abs(camera.left-camera.right)/2*2;
+                            bgPlane.scale.y = Math.abs(camera.top-camera.bottom);
+                            bgPlane.position.x=-Math.abs(camera.left-camera.right)/4*0;
+                            
+                            
+                              
+                            camera.updateProjectionMatrix();
+                            });
+      
+      
+      // display next shape if click or touch
+      document.body.addEventListener("click", clickAction, false);
+      document.body.addEventListener("touchstart", clickAction, false);
+      
+      function clickAction() {
+          timer = 50;
+      }
+      
+      
+      // Set the background color of the scene.
+      renderer.setClearColorHex(0x000000, 1);
+
+      // Create a light, set its position, and add it to the scene.
+      var light = new THREE.PointLight(0xffffff);
+      light.position.set(camera.position.x,camera.position.y,camera.position.z);
+      scene.add(light);
+                                 
+      //Create background plane
+      
+      var geometry = new THREE.PlaneBufferGeometry( 1,1, 2,2 );
+      
+      /// test material gradient
+      var size = 512;
+      
+      // create canvas
+      canvasT = document.createElement( 'canvas' );
+      canvasT.width = size;
+      canvasT.height = size;
+      
+      // get context
+      var contextT = canvasT.getContext( '2d' );
+      
+      // draw gradient
+      contextT.rect( 0, 0, size, size );
+//      var gradient = contextT.createLinearGradient( 0, 0, size, 0 );
+
+      var gradient = contextT.createRadialGradient( size/2 , size/2, size/3*2,  size/2 , size/2, 0 );
+
+      var iter = 50;
+      
+      for (var j = 0 ; j < iter +1 ; j ++ ) {
+          var cval =  200 - Math.floor( Math.pow(j/iter,2) * 200 ) + 55;
+          
+          var sval = "rgb("+cval+","+cval+","+cval+")";
+          
+          gradient.addColorStop((1-j/(iter)) * 1, sval);
+          
+      }
+      
+      contextT.fillStyle = gradient;
+      contextT.fill();
+
+      var texture = new THREE.Texture( canvasT );
+      texture.needsUpdate = true; // important!
+      
+      var material = new THREE.MeshBasicMaterial( { map: texture, transparent: true } );
+
+      material.side=THREE.DoubleSide;
+      
+      var bgPlane = new THREE.Mesh( geometry , material );
+      
+      mainObj.add( bgPlane );
+      bgPlane.scale.x = Math.abs(camera.left-camera.right)/2*2;
+      bgPlane.scale.y = Math.abs(camera.top-camera.bottom);
+      bgPlane.position.x=-Math.abs(camera.left-camera.right)/4*0;
+      bgPlane.position.z=-10;
+      
+
+      
+
+      // Add OrbitControls so that we can pan around with the mouse.
+      //controls = new THREE.OrbitControls(camera, renderer.domElement);
+      
+      // postprocessing
+      
+      renderer.autoClear = false;
+      
+      var renderTargetParameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false };
+      renderTarget = new THREE.WebGLRenderTarget( WIDTH, HEIGHT, renderTargetParameters );
+      
+      effectFXAA = new THREE.ShaderPass( THREE.FXAAShader);
+      effectFXAA.uniforms[ 'resolution' ].value.set( 1 / (WIDTH * dpr), 1 / (HEIGHT * dpr) );
+      
+      
+      
+      composer = new THREE.EffectComposer( renderer, renderTarget );
+      composer.setSize(WIDTH * dpr, HEIGHT * dpr);
+      composer.addPass( new THREE.RenderPass( scene, camera ) );
+      
+      glitchPass = new THREE.GlitchPass();
+      glitchPass.specialWild = true;
+      //glitchPass.goWild = true;
+
+      glitchPass.renderToScreen = true;
+      
+      composer.addPass( effectFXAA );
+      
+      composer.addPass( glitchPass );
+      
+
+    }
+  
+  
+  function updateModel() {
+//      var material = new THREE.MeshLambertMaterial({color: 0xffffff});
+var material = new THREE.MeshPhongMaterial({color: 0x222222}, {specular: 0x111111} , {shininess: 100});
+      material.side=THREE.DoubleSide;
+      mesh = new THREE.Mesh(shapeGeo[shapeIndex], material);
+      shape = mesh;
+      shape.position.x = opoz;
+      
+      shape.rotation.x = Math.random() * 360;
+      shape.rotation.y = Math.random() * 360;
+      shape.rotation.z = Math.random() * 360;
+      
+      mainObj.add(shape);
+
+  }
+  
+  
+
+
+  
+  // Renders the scene and updates the render as needed.
+    function animate() {
+        
+        // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
+        requestAnimationFrame(animate);
+        stats.update();
+        
+        //rotate shape
+        var dTime = mainClock.getDelta();
+        
+        timer += dTime;
+        
+        
+        
+        shape.rotation.x += rx * dTime * 20;
+        shape.rotation.y += ry * dTime * 20;
+        shape.rotation.z += rz * dTime * 20;
+        
+        // Render the scene.
+        
+        // var time = Date.now();
+        
+        mainObj.scale.x = flip;
+        shape.scale.x = flip;
+
+
+        
+        composer.render();
+        
+        //renderer.render(scene, camera);
+        
+        
+        
+        if (timer > 10) {
+            
+            timer = 0;
+            var blop = Math.random();
+            blop = blop*shapeGeo.length;
+            blop = Math.floor(blop);
+            
+            shapeIndex = blop;
+            
+            flip = 1;
+            
+            if (Math.random() > .5 ) {
+                flip = -1 ;
+            }
+            
+            
+            rx = (Math.random()*.01+.01)*Math.sign(Math.random()-.5) * .5 ;
+            ry = (Math.random()*.01+.01)*Math.sign(Math.random()-.5) * .5 ;
+            rz = (Math.random()*.01+.01)*Math.sign(Math.random()-.5) * .5 ;
+            
+            
+            mainObj.remove(shape);
+            updateModel(shapes[shapeIndex].shapePath);
+
+        }
+        
+        glitchPass.curF = timer;
+        
+    }
+  
+      </script>
+  
+</body>
+</html>
